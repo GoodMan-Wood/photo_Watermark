@@ -20,6 +20,7 @@ def parse_args(argv=None):
     p.add_argument('--dry-run', action='store_true', help='预览但不写入文件')
     p.add_argument('--verbose', action='store_true', help='输出详细日志')
     p.add_argument('--log', type=str, default='INFO', help='日志级别（DEBUG, INFO, WARNING, ERROR），默认 INFO')
+    p.add_argument('--logfile', type=str, default=None, help='将日志写入到指定文件（追加模式）')
     return p.parse_args(argv)
 
 
@@ -41,11 +42,39 @@ def main(argv=None):
 
     try:
         import logging
-        logging.basicConfig(level=getattr(logging, args.log.upper(), logging.INFO), format='[%(levelname)s] %(message)s')
+        handlers = []
+        # Console handler
+        ch = logging.StreamHandler()
+        ch.setFormatter(logging.Formatter('[%(levelname)s] %(message)s'))
+        handlers.append(ch)
+        # Optional file handler
+        if args.logfile:
+            fh = logging.FileHandler(args.logfile, mode='a', encoding='utf-8')
+            fh.setFormatter(logging.Formatter('%(asctime)s [%(levelname)s] %(message)s'))
+            handlers.append(fh)
+
+        level = getattr(logging, args.log.upper(), logging.INFO)
+        root = logging.getLogger()
+        # Replace existing handlers so our FileHandler is guaranteed to run
+        root.handlers.clear()
+        root.setLevel(level)
+        for h in handlers:
+            root.addHandler(h)
         from .watermark import process_path
         stats = process_path(args.path, recursive=args.recursive, options=options, workers=args.workers)
         if stats:
             logging.info(f"Processed: success={stats.get('success',0)} failed={stats.get('failed',0)} skipped={stats.get('skipped',0)}")
+            # If a logfile was used, ensure FileHandler is flushed and closed so callers (tests) can remove the file
+            if args.logfile:
+                root = logging.getLogger()
+                for h in list(root.handlers):
+                    try:
+                        if isinstance(h, logging.FileHandler):
+                            h.flush()
+                            h.close()
+                            root.removeHandler(h)
+                    except Exception:
+                        pass
     except KeyboardInterrupt:
         print('\nCancelled', file=sys.stderr)
         sys.exit(2)

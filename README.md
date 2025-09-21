@@ -64,6 +64,7 @@ usage: __main__.py [-h] [--fontsize FONTSIZE] [--color COLOR]
 - `--recursive`：递归处理目录
 - `--dry-run`：仅预览不写入
 - `--verbose`：显示详细日志
+- `--logfile`：将日志写入到指定文件（追加模式），例如 `--logfile C:\logs\process.log`
 
 ## 运行测试
 
@@ -103,4 +104,13 @@ README.md
 
 ---
 
-如需我现在继续实现“改进功能与健壮性”（字体加载及透明度支持），回复确认即可。
+### 日志到文件示例
+
+在 Windows PowerShell 中将日志写入文件并显示控制台输出的示例：
+
+```powershell
+# 指定 logfile，同时显示控制台输出
+python -m photo_watermark "C:\path\to\photos" --recursive --log INFO --logfile "C:\temp\photo_process.log"
+```
+
+日志文件采用追加模式（append），编码为 UTF-8。若需要日志轮替或按大小分割，请告诉我，我可以添加 `RotatingFileHandler` 支持。

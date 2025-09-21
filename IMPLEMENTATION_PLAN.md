@@ -98,8 +98,3 @@ python -m venv .venv; .\.venv\Scripts\Activate.ps1; pip install -r requirements.
 交付与后续
 
 - 完成 MVP 后，提交代码并运行测试。随后可扩展：并发处理、自动对比色、更多格式支持、EXIF 写回。
-
-
----
-
-请确认是否开始实现 MVP 代码（我可以从实现单文件 CLI 开始：`photo_watermark/__main__.py` 与单个 `photo_watermark/watermark.py`），或者先在这里调整计划细节。
