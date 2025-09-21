@@ -19,6 +19,7 @@ def parse_args(argv=None):
     p.add_argument('--recursive', action='store_true', help='递归遍历目录')
     p.add_argument('--dry-run', action='store_true', help='预览但不写入文件')
     p.add_argument('--verbose', action='store_true', help='输出详细日志')
+    p.add_argument('--log', type=str, default='INFO', help='日志级别（DEBUG, INFO, WARNING, ERROR），默认 INFO')
     return p.parse_args(argv)
 
 
@@ -39,8 +40,12 @@ def main(argv=None):
     }
 
     try:
+        import logging
+        logging.basicConfig(level=getattr(logging, args.log.upper(), logging.INFO), format='[%(levelname)s] %(message)s')
         from .watermark import process_path
-        process_path(args.path, recursive=args.recursive, options=options, workers=args.workers)
+        stats = process_path(args.path, recursive=args.recursive, options=options, workers=args.workers)
+        if stats:
+            logging.info(f"Processed: success={stats.get('success',0)} failed={stats.get('failed',0)} skipped={stats.get('skipped',0)}")
     except KeyboardInterrupt:
         print('\nCancelled', file=sys.stderr)
         sys.exit(2)

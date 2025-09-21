@@ -3,6 +3,7 @@ from datetime import datetime
 from typing import Optional, Tuple
 from PIL import Image, ImageDraw, ImageFont, ExifTags
 from .utils import parse_hex_color
+import logging
 
 
 def extract_date_from_image(path: str) -> Optional[datetime.date]:
@@ -110,11 +111,11 @@ def process_file(path: str, options: dict) -> Optional[str]:
     if date is None:
         if options.get('skip_no_time'):
             if options.get('verbose'):
-                print(f"Skipping {path}: no date available")
+                logging.info(f"Skipping {path}: no date available")
             return None
         else:
             if options.get('verbose'):
-                print(f"No date for {path}, using 'unknown' text")
+                logging.info(f"No date for {path}, using 'unknown' text")
             text = 'unknown'
     else:
         text = date.strftime('%Y-%m-%d')
@@ -141,7 +142,7 @@ def process_file(path: str, options: dict) -> Optional[str]:
             out_path = os.path.join(out_dir, out_name)
 
             if options.get('dry_run'):
-                print(f"[dry-run] would write: {out_path}")
+                logging.info(f"[dry-run] would write: {out_path}")
                 return out_path
 
             save_kwargs = {}
@@ -150,11 +151,11 @@ def process_file(path: str, options: dict) -> Optional[str]:
                 out_img = out_img.convert('RGB')
             out_img.save(out_path, **save_kwargs)
             if options.get('verbose'):
-                print(f"Saved watermarked image to: {out_path}")
+                logging.info(f"Saved watermarked image to: {out_path}")
             return out_path
     except Exception as e:
         if options.get('verbose'):
-            print(f"Error processing {path}: {e}")
+            logging.exception(f"Error processing {path}: {e}")
         return None
 
 
@@ -174,18 +175,33 @@ def process_path(path: str, recursive: bool=False, options: dict=None, workers: 
     else:
         raise FileNotFoundError(path)
 
+    # collect stats
+    stats = {'success': 0, 'failed': 0, 'skipped': 0}
     if workers is None or workers <= 1:
         for f in files_to_process:
-            process_file(f, options)
-        return
+            res = process_file(f, options)
+            if res is None:
+                # consider skipped or failed: try to infer
+                # If skip_no_time triggered, treat as skipped (we logged it)
+                stats['skipped'] += 1
+            else:
+                stats['success'] += 1
+        return stats
 
     # concurrent processing
     from concurrent.futures import ThreadPoolExecutor, as_completed
     with ThreadPoolExecutor(max_workers=workers) as ex:
         futures = {ex.submit(process_file, f, options): f for f in files_to_process}
         for fut in as_completed(futures):
+            f = futures[fut]
             try:
-                _ = fut.result()
-            except Exception as e:
+                res = fut.result()
+                if res is None:
+                    stats['skipped'] += 1
+                else:
+                    stats['success'] += 1
+            except Exception:
+                stats['failed'] += 1
                 if options.get('verbose'):
-                    print(f"Error processing {futures[fut]}: {e}")
+                    logging.exception(f"Error processing {f}")
+    return stats

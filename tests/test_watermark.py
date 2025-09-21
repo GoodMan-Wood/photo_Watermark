@@ -72,3 +72,19 @@ def test_process_path_with_workers():
         assert len([f for f in files if f.endswith('_wm.jpg')]) == 4
     finally:
         shutil.rmtree(tmp)
+
+
+def test_process_path_returns_stats():
+    tmp = tempfile.mkdtemp()
+    try:
+        src = os.path.join(tmp, 'one')
+        os.makedirs(src, exist_ok=True)
+        path = os.path.join(src, 'a.jpg')
+        Image.new('RGB', (50, 50), color=(10, 10, 10)).save(path)
+        options = {'fontsize': 12, 'color': '#FFF', 'position': 'center', 'font': None, 'use_mtime': True, 'skip_no_time': False, 'margin': 2, 'dry_run': True, 'quality': 80, 'verbose': False, 'opacity': 255}
+        from photo_watermark.watermark import process_path
+        stats = process_path(src, recursive=False, options=options, workers=1)
+        assert isinstance(stats, dict)
+        assert set(stats.keys()) == {'success', 'failed', 'skipped'}
+    finally:
+        shutil.rmtree(tmp)
