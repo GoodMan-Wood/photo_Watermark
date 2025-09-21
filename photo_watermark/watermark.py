@@ -29,15 +29,19 @@ def extract_date_from_image(path: str) -> Optional[datetime.date]:
 
 
 def _get_font(font_path: Optional[str], fontsize: int) -> ImageFont.FreeTypeFont:
+    # Priority: user-provided font -> common system fonts -> Pillow default
     if font_path and os.path.exists(font_path):
         try:
             return ImageFont.truetype(font_path, fontsize)
         except Exception:
             pass
-    try:
-        return ImageFont.truetype('arial.ttf', fontsize)
-    except Exception:
-        return ImageFont.load_default()
+    # Try several common fonts (Windows/DejaVu)
+    for fname in ('arial.ttf', 'DejaVuSans.ttf', 'LiberationSans-Regular.ttf'):
+        try:
+            return ImageFont.truetype(fname, fontsize)
+        except Exception:
+            continue
+    return ImageFont.load_default()
 
 
 def render_watermark(img: Image.Image, text: str, font_path: Optional[str], fontsize: int, color: Tuple[int,int,int], position: str, margin: int, opacity: int = 255) -> Image.Image:
@@ -84,7 +88,8 @@ def render_watermark(img: Image.Image, text: str, font_path: Optional[str], font
         y = (h - text_h) // 2
 
     r,g,b = color
-    draw.text((x, y), text, font=font, fill=(r, g, b, opacity))
+    # draw with alpha
+    draw.text((x, y), text, font=font, fill=(r, g, b, int(opacity)))
 
     out = Image.alpha_composite(base, overlay)
     # If original image had no alpha, convert back to RGB
@@ -121,7 +126,7 @@ def process_file(path: str, options: dict) -> Optional[str]:
                 color = parse_hex_color(options.get('color', '#FFFFFF'))
             except Exception:
                 pass
-            out_img = render_watermark(img, text, options.get('font'), options.get('fontsize',36), color, options.get('position','bottom-right'), options.get('margin',10))
+            out_img = render_watermark(img, text, options.get('font'), options.get('fontsize',36), color, options.get('position','bottom-right'), options.get('margin',10), opacity=options.get('opacity',255))
 
             # Build output path: create sibling directory named <dirname>_watermark
             src_dir = os.path.dirname(path) or '.'

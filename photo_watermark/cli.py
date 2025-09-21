@@ -14,6 +14,7 @@ def parse_args(argv=None):
     p.add_argument('--skip-no-time', action='store_true', help='若无时间信息则跳过该文件')
     p.add_argument('--margin', type=int, default=10, help='边距像素，默认 10')
     p.add_argument('--quality', type=int, default=95, help='JPEG 输出质量（1-100），默认 95')
+    p.add_argument('--opacity', type=int, default=255, help='水印不透明度 (0-255)，默认 255 (不透明)')
     p.add_argument('--recursive', action='store_true', help='递归遍历目录')
     p.add_argument('--dry-run', action='store_true', help='预览但不写入文件')
     p.add_argument('--verbose', action='store_true', help='输出详细日志')
@@ -27,6 +28,7 @@ def main(argv=None):
         'color': args.color,
         'position': args.position,
         'font': args.font,
+        'opacity': args.opacity,
         'use_mtime': args.use_mtime_if_no_exif,
         'skip_no_time': args.skip_no_time,
         'margin': args.margin,
