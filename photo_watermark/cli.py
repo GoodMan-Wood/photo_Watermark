@@ -15,6 +15,7 @@ def parse_args(argv=None):
     p.add_argument('--margin', type=int, default=10, help='边距像素，默认 10')
     p.add_argument('--quality', type=int, default=95, help='JPEG 输出质量（1-100），默认 95')
     p.add_argument('--opacity', type=int, default=255, help='水印不透明度 (0-255)，默认 255 (不透明)')
+    p.add_argument('--workers', type=int, default=1, help='并发 worker 数，默认 1（不并发）')
     p.add_argument('--recursive', action='store_true', help='递归遍历目录')
     p.add_argument('--dry-run', action='store_true', help='预览但不写入文件')
     p.add_argument('--verbose', action='store_true', help='输出详细日志')
@@ -38,7 +39,8 @@ def main(argv=None):
     }
 
     try:
-        process_path(args.path, recursive=args.recursive, options=options)
+        from .watermark import process_path
+        process_path(args.path, recursive=args.recursive, options=options, workers=args.workers)
     except KeyboardInterrupt:
         print('\nCancelled', file=sys.stderr)
         sys.exit(2)

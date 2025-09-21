@@ -51,3 +51,24 @@ def test_process_file_creates_output():
         assert any(f.endswith('_wm.jpg') for f in files)
     finally:
         shutil.rmtree(tmp)
+
+
+def test_process_path_with_workers():
+    tmp = tempfile.mkdtemp()
+    try:
+        src = os.path.join(tmp, 'srcdir')
+        os.makedirs(src, exist_ok=True)
+        # create multiple files
+        for i in range(4):
+            Image.new('RGB', (100 + i * 10, 100), color=(i * 20, 50, 100)).save(os.path.join(src, f'img{i}.jpg'))
+        options = {'fontsize': 12, 'color': '#FFFFFF', 'position': 'bottom-right', 'font': None, 'use_mtime': True, 'skip_no_time': False, 'margin': 5, 'dry_run': False, 'quality': 80, 'verbose': False, 'opacity': 255}
+        from photo_watermark.watermark import process_path
+        process_path(src, recursive=False, options=options, workers=3)
+        parent = os.path.dirname(os.path.abspath(src))
+        dirname = os.path.basename(os.path.abspath(src))
+        expected_dir = os.path.join(parent, f"{dirname}_watermark")
+        assert os.path.isdir(expected_dir)
+        files = os.listdir(expected_dir)
+        assert len([f for f in files if f.endswith('_wm.jpg')]) == 4
+    finally:
+        shutil.rmtree(tmp)

@@ -158,19 +158,34 @@ def process_file(path: str, options: dict) -> Optional[str]:
         return None
 
 
-def process_path(path: str, recursive: bool=False, options: dict=None):
+def process_path(path: str, recursive: bool=False, options: dict=None, workers: int = 1):
     if options is None:
         options = {}
+    files_to_process = []
     if os.path.isfile(path):
-        process_file(path, options)
-        return
-    if os.path.isdir(path):
+        files_to_process = [path]
+    elif os.path.isdir(path):
         for root, dirs, files in os.walk(path):
             for f in files:
                 if f.lower().endswith(('.jpg', '.jpeg', '.png')):
-                    full = os.path.join(root, f)
-                    process_file(full, options)
+                    files_to_process.append(os.path.join(root, f))
             if not recursive:
                 break
+    else:
+        raise FileNotFoundError(path)
+
+    if workers is None or workers <= 1:
+        for f in files_to_process:
+            process_file(f, options)
         return
-    raise FileNotFoundError(path)
+
+    # concurrent processing
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+    with ThreadPoolExecutor(max_workers=workers) as ex:
+        futures = {ex.submit(process_file, f, options): f for f in files_to_process}
+        for fut in as_completed(futures):
+            try:
+                _ = fut.result()
+            except Exception as e:
+                if options.get('verbose'):
+                    print(f"Error processing {futures[fut]}: {e}")
